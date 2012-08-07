@@ -7,10 +7,10 @@ import sys
 # Bring reg names into global namespace 
 _REGS_   = ['eax', 'ecx', 'edx', 'ebx', 'esp', 'ebp', 'edi', 'esi']
 # Functions worth exporting directly to importers
-_FUNCS_ = ['AbsPtr', 'imm', 'uimm']
-
+_FUNCS_ = ['AbsPtr', 'imm', 'uimm', 'GPVar', 'UIntFunctionBuilder0']
+_GLOBALS_ = ['CALL_CONV_DEFAULT']
 _MODULE_ = sys.modules[__name__]
-for reg in (_REGS_ + _FUNCS_):
+for reg in (_REGS_ + _FUNCS_ + _GLOBALS_):
     setattr(_MODULE_, reg, getattr(AsmJit, reg))
 
 class Code(object):
@@ -43,19 +43,24 @@ class Code(object):
             postfix = '...'
         code = self.code_reprtype.from_address(self.ptr)
         return 'Code - ' + repr(array.array('B', code)) + postfix
-            
-class Assembler(object):
+
+class LibWrapper(object):       
+    def __init__(self, base):
+        self.base = base
+
+    def __getattr__(self, attr):
+        if attr not in self.__dict__:
+            base = self.__dict__['base']
+            return getattr(self.base, attr)
+        return self.__dict__[attr]
+     
+class Assembler(LibWrapper):
     """ 
     Wrapper around AsmJit.Assembler
     """
     def __init__(self): 
         self.assembler = AsmJit.Assembler()
-
-    def __getattr__(self, attr):
-        if attr not in self.__dict__:
-            assembler = self.__dict__['assembler']
-            return getattr(assembler, attr)
-        return self.code
+        super(Assembler, self).__init__(self.assembler)
 
     def __repr__(self):
         return 'Assembler - ' + repr(self.code)
@@ -71,6 +76,13 @@ class Assembler(object):
         c = Code(self.getCode(), self.getCodeSize())
         return c
 
+class Compiler(LibWrapper):
+    """
+    Wrapper around AsmJit.Compiler
+    """
+    def __init__(self):
+        self.compiler = AsmJit.Compiler()
+        super(Compiler, self).__init__(self.compiler)
 def DerefUInt32(p):
     return c_uint32.from_address(p).value
 

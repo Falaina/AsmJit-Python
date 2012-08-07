@@ -3,6 +3,7 @@
   #define ASMJIT_X86
   #define AsmJit_EXPORTS
   #include "AsmJit/Assembler.h"
+  #include "AsmJit/Compiler.h"
   #include "AsmJit/Logger.h"
   #include "AsmJit/MemoryManager.h"
   #include "AsmJit/OperandX86X64.h"
@@ -11,7 +12,7 @@
 %}
 %include "stdint.i"
 %include "cpointer.i"
-
+// TODO: Split Assembler into its own interface file
 %pointer_class(uint8_t,  uint8_tp)
 %pointer_class(uint16_t, uint16_tp)
 %pointer_class(uint32_t, uint32_tp)
@@ -22,6 +23,7 @@
 typedef int32_t sysint_t;
 #define ASMJIT_VAR extern ASMJIT_API
 
+%include "Defs.i"
 /* MEMORY MANAGEMENT */
 struct ASMJIT_API MemoryManager
 {
@@ -38,11 +40,26 @@ struct Imm {
   virtual ~Imm() ASMJIT_NOTHROW;  
 };
 
+struct ASMJIT_HIDDEN Operand
+{
+    inline Operand() ASMJIT_NOTHROW;
+};
+
+struct ASMJIT_HIDDEN BaseVar : public Operand
+{
+    inline BaseVar(const _DontInitialize& dontInitialize) ASMJIT_NOTHROW;
+};
+
+struct ASMJIT_HIDDEN GPVar : public BaseVar
+{
+    inline GPVar() ASMJIT_NOTHROW;
+    inline GPVar(const GPVar& other) ASMJIT_NOTHROW;
+};
 
 ASMJIT_API Imm imm(sysint_t i) ASMJIT_NOTHROW;
 ASMJIT_API Imm uimm(sysuint_t i) ASMJIT_NOTHROW;
 
-
+%include "Compiler.i"
 Mem _MemPtrAbs(void* target, sysint_t disp, uint32_t segmentPrefix, uint32_t ptrSize) ASMJIT_NOTHROW;
 static inline Mem ptr_abs(void* target, sysint_t disp = 0, uint32_t segmentPrefix = SEGMENT_NONE) ASMJIT_NOTHROW
 { return _MemPtrAbs(target, disp, segmentPrefix, 0); }
