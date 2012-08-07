@@ -4,15 +4,28 @@ LD=$(CROSS)ld
 AR=$(CROSS)ar
 CC=$(CROSS)gcc
 CXX=$(CROSS)g++
-ASMJIT_DIR=AsmJit-1.0-beta4/AsmJit
+
+ASMJIT_DIR=deps/AsmJit-1.0-beta4/AsmJit
 INCLUDES=-I$(ASMJIT_DIR)/.. -I/usr/include/python2.7
 
-_AsmJit.so: AsmJit_wrap.cxx
-	cd build
-	$(CXX) $(INCLUDES) $(ASMJIT_DIR)/*.cpp AsmJit_wrap.cxx -shared -fPIC -o _AsmJit.so
+TEST_NAMES := jittests.py
+TEST_DIR   := tests/
+TEST_FILES := $(addprefix $(TEST_DIR), $(TEST_NAMES))
 
-AsmJit_wrap.cxx: AsmJit.i
-	swig -c++ -python -o AsmJit_wrap.cxx  AsmJit.i
+all: lib/_AsmJit.so test
+
+obj/AsmJit_wrap.cxx: swig/AsmJit.i
+	@echo "******* Generating SWIG wrapper *******\n"
+	swig -c++ -python -o $@  $^
+
+lib/_AsmJit.so: obj/AsmJit_wrap.cxx
+	@echo "******* Building Python extension *******\n"
+	cd build
+	$(CXX) $(INCLUDES) $(ASMJIT_DIR)/*.cpp obj/AsmJit_wrap.cxx -shared -fPIC -o $@
+
+test: lib/_AsmJit.so $(TEST_FILES)
+	@echo "******* Running tests *******\n"
+	nosetests -v $(TEST_FILES)
 
 # Forms the basis of the swig interface
 preprocess: 
