@@ -7,13 +7,11 @@ import sys
 # Bring reg names into global namespace 
 _REGS_   = ['eax', 'ecx', 'edx', 'ebx', 'esp', 'ebp', 'edi', 'esi']
 # Functions worth exporting directly to importers
-_FUNCS_ = ['AbsPtr']
+_FUNCS_ = ['AbsPtr', 'imm', 'uimm']
 
 _MODULE_ = sys.modules[__name__]
 for reg in (_REGS_ + _FUNCS_):
     setattr(_MODULE_, reg, getattr(AsmJit, reg))
-
-
 
 class Code(object):
     """    
@@ -73,5 +71,8 @@ class Assembler(object):
         c = Code(self.getCode(), self.getCodeSize())
         return c
 
+def DerefUInt32(p):
+    return c_uint32.from_address(p).value
+
 # Give importers a direct reference to underlying AsmJit
-_ALL_ = ['AsmJit'] + _REGS_ + _FUNCS_
+_ALL_ = ['AsmJit', 'DerefUInt32'] + _REGS_ + _FUNCS_

@@ -1,8 +1,15 @@
+# CROSS=i686-w64-mingw32-
+RC=$(CROSS)windres
+LD=$(CROSS)ld
+AR=$(CROSS)ar
+CC=$(CROSS)gcc
+CXX=$(CROSS)g++
 ASMJIT_DIR=AsmJit-1.0-beta4/AsmJit
 INCLUDES=-I$(ASMJIT_DIR)/.. -I/usr/include/python2.7
+
 _AsmJit.so: AsmJit_wrap.cxx
 	cd build
-	g++ $(INCLUDES) $(ASMJIT_DIR)/*.cpp AsmJit_wrap.cxx -shared -fPIC -o _AsmJit.so
+	$(CXX) $(INCLUDES) $(ASMJIT_DIR)/*.cpp AsmJit_wrap.cxx -shared -fPIC -o _AsmJit.so
 
 AsmJit_wrap.cxx: AsmJit.i
 	swig -c++ -python -o AsmJit_wrap.cxx  AsmJit.i

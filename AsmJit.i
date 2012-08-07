@@ -4,6 +4,7 @@
   #define AsmJit_EXPORTS
   #include "AsmJit/Assembler.h"
   #include "AsmJit/Logger.h"
+  #include "AsmJit/MemoryManager.h"
   #include "AsmJit/OperandX86X64.h"
   #include "stdio.h"
   using namespace AsmJit;
@@ -21,7 +22,27 @@
 typedef int32_t sysint_t;
 #define ASMJIT_VAR extern ASMJIT_API
 
-struct Mem;
+/* MEMORY MANAGEMENT */
+struct ASMJIT_API MemoryManager
+{
+  virtual void* alloc(sysuint_t size, uint32_t type = MEMORY_ALLOC_FREEABLE) ASMJIT_NOTHROW = 0;
+  virtual bool free(void* address) ASMJIT_NOTHROW = 0;
+  virtual void freeAll() ASMJIT_NOTHROW = 0;
+  static MemoryManager* getGlobal() ASMJIT_NOTHROW;
+};
+/* OPERANDS */
+struct Mem {
+  virtual ~Mem() ASMJIT_NOTHROW;  
+};
+struct Imm {
+  virtual ~Imm() ASMJIT_NOTHROW;  
+};
+
+
+ASMJIT_API Imm imm(sysint_t i) ASMJIT_NOTHROW;
+ASMJIT_API Imm uimm(sysuint_t i) ASMJIT_NOTHROW;
+
+
 Mem _MemPtrAbs(void* target, sysint_t disp, uint32_t segmentPrefix, uint32_t ptrSize) ASMJIT_NOTHROW;
 static inline Mem ptr_abs(void* target, sysint_t disp = 0, uint32_t segmentPrefix = SEGMENT_NONE) ASMJIT_NOTHROW
 { return _MemPtrAbs(target, disp, segmentPrefix, 0); }
@@ -32,11 +53,15 @@ static inline Mem ptr_abs(void* target, sysint_t disp = 0, uint32_t segmentPrefi
   }
 %}
 
+/* LOGGING */
+
 struct Logger;
 struct FileLogger : public Logger
 {
   FileLogger(FILE* stream=stdout) ASMJIT_NOTHROW;
 };
+
+/* ASSEMBLER */
 
 struct CodeGenerator;
 struct ASMJIT_API AssemblerCore

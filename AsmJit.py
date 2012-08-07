@@ -162,6 +162,65 @@ def sysint_tp_frompointer(*args):
   return _AsmJit.sysint_tp_frompointer(*args)
 sysint_tp_frompointer = _AsmJit.sysint_tp_frompointer
 
+class MemoryManager(_object):
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, MemoryManager, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, MemoryManager, name)
+    def __init__(self, *args, **kwargs): raise AttributeError("No constructor defined - class is abstract")
+    __repr__ = _swig_repr
+    def alloc(self, *args): return _AsmJit.MemoryManager_alloc(self, *args)
+    def free(self, *args): return _AsmJit.MemoryManager_free(self, *args)
+    def freeAll(self): return _AsmJit.MemoryManager_freeAll(self)
+    __swig_getmethods__["getGlobal"] = lambda x: _AsmJit.MemoryManager_getGlobal
+    if _newclass:getGlobal = staticmethod(_AsmJit.MemoryManager_getGlobal)
+    __swig_destroy__ = _AsmJit.delete_MemoryManager
+    __del__ = lambda self : None;
+MemoryManager_swigregister = _AsmJit.MemoryManager_swigregister
+MemoryManager_swigregister(MemoryManager)
+
+def MemoryManager_getGlobal():
+  return _AsmJit.MemoryManager_getGlobal()
+MemoryManager_getGlobal = _AsmJit.MemoryManager_getGlobal
+
+class Mem(_object):
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, Mem, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, Mem, name)
+    __repr__ = _swig_repr
+    __swig_destroy__ = _AsmJit.delete_Mem
+    __del__ = lambda self : None;
+    def __init__(self): 
+        this = _AsmJit.new_Mem()
+        try: self.this.append(this)
+        except: self.this = this
+Mem_swigregister = _AsmJit.Mem_swigregister
+Mem_swigregister(Mem)
+
+class Imm(_object):
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, Imm, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, Imm, name)
+    __repr__ = _swig_repr
+    __swig_destroy__ = _AsmJit.delete_Imm
+    __del__ = lambda self : None;
+    def __init__(self): 
+        this = _AsmJit.new_Imm()
+        try: self.this.append(this)
+        except: self.this = this
+Imm_swigregister = _AsmJit.Imm_swigregister
+Imm_swigregister(Imm)
+
+
+def imm(*args):
+  return _AsmJit.imm(*args)
+imm = _AsmJit.imm
+
+def uimm(*args):
+  return _AsmJit.uimm(*args)
+uimm = _AsmJit.uimm
 
 def _MemPtrAbs(*args):
   return _AsmJit._MemPtrAbs(*args)
