@@ -56,8 +56,8 @@ struct ASMJIT_HIDDEN GPVar : public BaseVar
     inline GPVar(const GPVar& other) ASMJIT_NOTHROW;
 };
 
-ASMJIT_API Imm imm(sysint_t i) ASMJIT_NOTHROW;
-ASMJIT_API Imm uimm(sysuint_t i) ASMJIT_NOTHROW;
+ASMJIT_API Imm imm(uint32_t i) ASMJIT_NOTHROW;
+ASMJIT_API Imm uimm(uint32_t i) ASMJIT_NOTHROW;
 
 %include "Compiler.i"
 Mem _MemPtrAbs(void* target, sysint_t disp, uint32_t segmentPrefix, uint32_t ptrSize) ASMJIT_NOTHROW;
@@ -65,7 +65,7 @@ static inline Mem ptr_abs(void* target, sysint_t disp = 0, uint32_t segmentPrefi
 { return _MemPtrAbs(target, disp, segmentPrefix, 0); }
 
 %inline %{
-   Mem AbsPtr(intptr_t ptr) {
+   Mem AbsPtr(unsigned int ptr) {
      return ptr_abs((void *)ptr);
   }
 %}

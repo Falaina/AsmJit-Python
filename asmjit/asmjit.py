@@ -1,8 +1,29 @@
 import AsmJit
 import array
-from ctypes import POINTER, pointer, c_uint8, c_uint32
+from ctypes import POINTER, pointer, c_uint8, c_uint32, create_string_buffer, cast, addressof, CFUNCTYPE, c_int, c_char, memmove
 from binascii import hexlify
 import sys
+import logging
+logging.basicConfig(format='%(asctime)-15s %(message)s')
+log = logging.getLogger('asmjit')
+logging.getLogger().setLevel(logging.INFO)
+log.setLevel(logging.INFO)
+__pychecker__ = 'unusednames=_ALL_'
+
+try:
+    import platform
+    arch = platform.architecture()
+    assert arch[0] == '32bit', 'asmjit Python bindings only work on 32-bit x86'
+except ImportError:
+    sys.stderr.write('Unable to determine system platform\n')
+    raise
+
+# TODO: x86-64
+TRAMPOLINE_SIZE = 2 + 4 + 4 # JMP Instruction(2), Indirect Address(4), Direct Address(4)
+
+# Some private globals
+_JMP_INSTN  = 'JMP'
+_CALL_INSTN = 'CALL'
 
 # Bring reg names into global namespace 
 _REGS_   = ['eax', 'ecx', 'edx', 'ebx', 'esp', 'ebp', 'edi', 'esi']
@@ -12,6 +33,118 @@ _GLOBALS_ = ['CALL_CONV_DEFAULT']
 _MODULE_ = sys.modules[__name__]
 for reg in (_REGS_ + _FUNCS_ + _GLOBALS_):
     setattr(_MODULE_, reg, getattr(AsmJit, reg))
+
+def MakeIntPtr(num):
+    return (c_int * 1).from_address(num)
+
+def MakeInt(num):
+    return c_int(num)
+
+def MakeIntFromPtr(var):
+    return c_int(addressof(var))
+
+def MakeFunction(ptr, *args):
+    """ 
+    Takes an integer that points to a function
+    and creates a callable for that function.
+    args contains the arguments types for the function.
+    All functions return c_uint
+    """
+    return CFUNCTYPE(c_uint32, *args)(ptr)
+
+def MakeAbsJmp(origin, dest, use_jmp=True):
+    """
+    Provides a ctypes byte buffer containing the x86
+    code to perform an absolute jump from origin
+    to dest.
+
+    if use_jmp is False, a call is emitted instead
+    of a jmp
+    """
+    __pychecker__ = 'unusednames=origin'
+    opcode1 = '\xFF'
+
+    if use_jmp:
+        opcode2 = '\x25' # JMP
+    else:
+        opcode2 = '\x15' # CALL
+    
+    buf = create_string_buffer(TRAMPOLINE_SIZE)
+    ptr = addressof(buf)
+
+    # Get pointers to the address integers
+    off_ptr = (c_uint32 * 1).from_address(ptr + 2)
+    dst_ptr = (c_uint32 * 1).from_address(ptr + 6)
+
+    # JMP Opcode
+    buf[0] = opcode1
+    buf[1] = opcode2
+
+    # Pointers
+    off_ptr[0] = c_uint32(ptr + 6)
+    dst_ptr[0] = c_uint32(dest)
+
+    log.info('Creating abs jmp code %s' % (hexlify(buf.raw),))
+    return buf
+
+
+def WriteAbsJmp(origin, dest, use_jmp=True):
+    """
+    Convenience function that generates code for an
+    absolute jump; saves TRAMPOLINE_SIZE bytes from the
+    destination; writes the absolute jump to the destination;
+    and returns a tuple containing the written buffer and
+    the original contents
+    """
+    new_buf    = MakeAbsJmp(origin, dest, use_jmp)
+    saved_buf  = create_string_buffer(len(new_buf.raw))
+    print dir(saved_buf)
+    origin_buf = (c_char * TRAMPOLINE_SIZE).from_address(origin)
+    
+    saved_buf.raw = origin_buf.raw
+    log.info('Saved Origin contents %s' % (hexlify(saved_buf),))
+
+    origin_buf.raw = new_buf.raw
+    log.info('Overwrote contents of origin with %s' % (hexlify(origin_buf),))
+
+    return (saved_buf, origin_buf)
+
+
+def WriteTrampoline(origin, dest):
+    """
+    Function which creates a trampoline; writes an absolute jump to
+    the trampoline at origin; 
+
+    The trampoline consists of
+    call dest
+    ret
+
+    if the hook function wishes to skip returning to the original function
+    it must pop the 1st return address before returning
+    """
+    trampoline_fn_buf = create_string_buffer((TRAMPOLINE_SIZE * 2) + 4)
+    (saved_buf, trampoline_buf)    = WriteAbsJmp(origin, addressof(trampoline_fn_buf))
+    call_buf = MakeAbsJmp(addressof(trampoline_fn_buf), dest)
+
+
+#    push_buf = 
+    trampoline_fn_ptr = addressof(trampoline_fn_buf)
+    saved_ptr = addressof(saved_buf)
+    call_ptr   = addressof(call_buf)
+
+    ret_buf  = MakeAbsJmp(trampoline_fn_ptr + len(call_buf) + len(saved_buf),
+                          origin + TRAMPOLINE_SIZE)
+    ret_ptr = addressof(ret_buf)
+
+    memmove(trampoline_fn_ptr                , call_ptr,   len(call_buf))
+    memmove(trampoline_fn_ptr + len(call_buf), saved_ptr,  len(saved_buf))    
+    memmove(trampoline_fn_ptr + len(call_buf) + len(saved_buf), 
+            ret_ptr,  len(ret_buf))    
+
+    log.info('Created trampoline function %s' % (hexlify(trampoline_fn_buf,)))
+
+    return (saved_buf, trampoline_fn_buf, trampoline_buf)
+    
 
 class Code(object):
     """    
@@ -50,7 +183,6 @@ class LibWrapper(object):
 
     def __getattr__(self, attr):
         if attr not in self.__dict__:
-            base = self.__dict__['base']
             return getattr(self.base, attr)
         return self.__dict__[attr]
      
@@ -71,6 +203,28 @@ class Assembler(LibWrapper):
     def toarray(self):
         return self.code.toarray()
 
+    def _py_emit_call_or_jmp(self, dest, instn):
+        __pychecker__ = 'no-classattr'
+
+        if instn   == _JMP_INSTN:
+            opcode2 = 0x15
+        elif instn == _CALL_INSTN:
+            opcode2 = 0x25
+        else:
+            raise ValueError, 'Unsupported instn %x' % (instn,)
+
+        self._emitByte(0xFF)
+        self._emitByte(opcode2)
+        self._emitDWord(int(self.getCode()) + 6)
+        self._emitDWord(dest)
+
+
+    def py_call(self, dest):
+        return self._py_emit_call_or_jmp(dest, _CALL_INSTN)
+
+    def py_jmp(self, dest):
+        return self._py_emit_call_or_jmp(dest, _JMP_INSTN)
+
     @property
     def code(self):
         c = Code(self.getCode(), self.getCodeSize())
@@ -86,5 +240,8 @@ class Compiler(LibWrapper):
 def DerefUInt32(p):
     return c_uint32.from_address(p).value
 
+# Exports from this module
+_EXPORTS_ = ['AsmJit', 'DerefUInt32', 'MakeFunction', 'MakeIntPtr', 'TRAMPOLINE_SIZE']
+
 # Give importers a direct reference to underlying AsmJit
-_ALL_ = ['AsmJit', 'DerefUInt32'] + _REGS_ + _FUNCS_
+_ALL_ = _EXPORTS_ + _REGS_ + _FUNCS_
