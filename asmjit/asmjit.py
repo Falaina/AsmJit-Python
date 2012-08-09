@@ -225,6 +225,9 @@ class Assembler(LibWrapper):
     def py_jmp(self, dest):
         return self._py_emit_call_or_jmp(dest, _JMP_INSTN)
 
+    def py_copy(self, dest, src, count):
+        raise NotImplementedError
+
     @property
     def code(self):
         c = Code(self.getCode(), self.getCodeSize())
