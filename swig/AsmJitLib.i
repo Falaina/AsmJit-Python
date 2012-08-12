@@ -1,4 +1,4 @@
-%module AsmJit
+%module AsmJitLib
 %{
   #define ASMJIT_X86
   #define AsmJit_EXPORTS
@@ -17,6 +17,7 @@
 %pointer_class(uint16_t, uint16_tp)
 %pointer_class(uint32_t, uint32_tp)
 %pointer_class(sysint_t, sysint_tp)
+
 #define ASMJIT_NOTHROW 
 #define ASMJIT_API
 #define ASMJIT_HIDDEN
