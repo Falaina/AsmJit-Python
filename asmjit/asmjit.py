@@ -126,7 +126,6 @@ def WriteTrampoline(origin, dest):
     (saved_buf, trampoline_buf)    = WriteAbsJmp(origin, addressof(trampoline_fn_buf))
     call_buf = MakeAbsJmp(addressof(trampoline_fn_buf), dest)
 
-
 #    push_buf = 
     trampoline_fn_ptr = addressof(trampoline_fn_buf)
     saved_ptr = addressof(saved_buf)
