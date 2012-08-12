@@ -113,9 +113,9 @@ class Assembler(LibWrapper):
         __pychecker__ = 'no-classattr'
 
         if instn   == _JMP_INSTN:
-            opcode2 = 0x15
-        elif instn == _CALL_INSTN:
             opcode2 = 0x25
+        elif instn == _CALL_INSTN:
+            opcode2 = 0x15
         else:
             raise ValueError, 'Unsupported instn %x' % (instn,)
 
@@ -124,15 +124,17 @@ class Assembler(LibWrapper):
         self._emitDWord(int(self.getCode()) + 6)
         self._emitDWord(dest)
 
+    def py_make_cfunc(self):
+        return MakeFunction(self.py_make())
+
+    def py_make(self):
+        return int(self.make())
 
     def py_call(self, dest):
-        return self._py_emit_call_or_jmp(dest, _CALL_INSTN)
+        raise NotImplementedError
 
     def py_jmp(self, dest):
         return self._py_emit_call_or_jmp(dest, _JMP_INSTN)
-
-    def py_copy(self, dest, src, count):
-        raise NotImplementedError
 
     @property
     def code(self):
