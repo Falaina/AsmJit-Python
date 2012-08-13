@@ -26,5 +26,5 @@ class TestCompiler(unittest.TestCase):
         functype = ctypes.CFUNCTYPE(restype, *argtypes)
         func = functype(raw_ptr)
         ret = func()
-        self.assertEqual(ret, 431, 'Compiler function did not return 432')
+        self.assertEqual(ret, 432, 'Compiler function did not return 432')
 
